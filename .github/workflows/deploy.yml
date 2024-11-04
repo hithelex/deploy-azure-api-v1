@@ -1,0 +1,39 @@
+name: Build and Deploy to Azure
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v2
+
+      - name: Log in to Azure Container Registry (ACR)
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Build and Push Docker image to ACR
+        env:
+          REGISTRY: myexampleacr.azurecr.io
+          IMAGE_NAME: deploy-azure-api
+        run: |
+          docker build -t $REGISTRY/$IMAGE_NAME:latest .
+          docker push $REGISTRY/$IMAGE_NAME:latest
+
+      - name: Deploy to Azure Container Instances (ACI)
+        uses: azure/aci-deploy@v1
+        with:
+          resource-group: myResourceGroup
+          dns-name-label: deploy-azure-api
+          image: myexampleacr.azurecr.io/deploy-azure-api:latest
+          registry-login-server: myexampleacr.azurecr.io
+          registry-username: ${{ secrets.ACR_USERNAME }}
+          registry-password: ${{ secrets.ACR_PASSWORD }}
+          name: deploy-azure-api
+          location: eastus  # Cambia la ubicación si es necesario
